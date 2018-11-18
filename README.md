@@ -63,3 +63,158 @@ Returns JSON data of every note.
 
   * **Code:** 404 Not Found <br/>
     **Content:** `{"message":"Empty set"}`
+ 
+ ### Get note
+
+Returns JSON data of a particular note.
+
+* **URL**
+
+  /notes/:id
+
+* **Method:**
+
+  `GET`
+  
+*  **URL Params**
+  
+   id=[integer]
+
+* **Data Params**
+
+  None
+
+* **Success Response:**
+
+  * **Code:** 200 OK <br/>
+    **Content:**
+    ```
+    {
+      "id": 1,
+      "created": "2018-11-18 17:55:01",
+      "updated": "2018-11-18 17:55:01",
+      "title": "First Note",
+      "note": "My first note.",
+      "colour": "#ffffff",
+      "archived": false
+      }
+    ```
+ 
+* **Error Response:**
+
+  * **Code:** 404 Not Found <br/>
+    **Content:** `{"message":"Note not found"}`
+
+### Add note
+
+Adds a new note.
+
+* **URL**
+
+  /notes
+
+* **Method:**
+
+  `POST`
+  
+*  **URL Params**
+  
+   None
+
+* **Data Params**
+
+  ```
+  {
+    "title":"Third Note",
+    "note":"My third note."
+  }
+  ```
+
+* **Success Response:**
+
+  * **Code:** 200 OK <br/>
+    **Content:**
+    ```
+    3
+    ```
+ 
+* **Error Response:**
+
+  * **Code:** 400 Bad Request <br/>
+    **Content:** `{"message":"Insert unsuccessful"}`
+
+### Update note
+
+Updates an existing note.
+
+* **URL**
+
+  /notes
+
+* **Method:**
+
+  `PUT`
+  
+*  **URL Params**
+  
+   None
+
+* **Data Params**
+
+  ```
+  {
+    "id": 3,
+    "title":"Third note edit",
+    "note":"My third note edited.",
+    "colour":"#0000ff",
+    "archived": false
+  }
+  ```
+
+* **Success Response:**
+
+  * **Code:** 200 OK <br/>
+    **Content:**
+    ```
+    1
+    ```
+ 
+* **Error Response:**
+
+  * **Code:** 400 Bad Request <br/>
+    **Content:** `{"message":"Update unsuccessful"}`
+    
+### Delete note
+
+Deletes an existing note.
+
+* **URL**
+
+  /notes/:id
+
+* **Method:**
+
+  `PUT`
+  
+*  **URL Params**
+  
+   id=[integer]
+
+* **Data Params**
+
+  None
+
+* **Success Response:**
+
+  * **Code:** 200 OK <br/>
+    **Content:**
+    ```
+    1
+    ```
+ 
+* **Error Response:**
+
+  * **Code:** 400 Bad Request <br/>
+    **Content:** `{"message":"Delete unsuccessful"}`
+
+
