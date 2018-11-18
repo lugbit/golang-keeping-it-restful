@@ -1,6 +1,6 @@
 # Note taking app the RESTful way
 ## Introduction
-A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)ful baeckend for a note taking app. Postman collection can be found [here](https://www.getpostman.com/collections/fa57fff58077138d4f68).
+A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)ful backend for a note taking app. Postman collection can be found [here](https://www.getpostman.com/collections/fa57fff58077138d4f68).
 
 ## API Overiew
 | HTTP Request Method  | Resource      | Description                   |
