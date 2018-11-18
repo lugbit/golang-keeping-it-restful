@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	h "../helpers"
 	"../models"
 	"../repo/notesrepository"
 	"github.com/gorilla/mux"
@@ -19,7 +20,8 @@ var notes []models.Note
 // Controller struct for initializing
 type Controller struct{}
 
-// GetNotes gets all notes
+// GetNotes gets all notes and either returns the JSON of the rows
+// or an error.
 func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 	// Return handlerfunc
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -30,14 +32,19 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 		notesRepo := notesrepository.NotesRepository{}
 
 		// notes now have all notes from db
-		notes = notesRepo.GetNotes(db, note, notes)
+		notes, err := notesRepo.GetNotes(db, note, notes)
+		if err != nil {
+			// No notes returned
+			h.JSONError(w, http.StatusNotFound, "Empty set")
+			return
+		}
 
-		// Encode slice of note to JSON and send as response
-		json.NewEncoder(w).Encode(notes)
+		h.JSONResponse(w, http.StatusOK, notes)
 	}
 }
 
-// GetNote retrieves a singular note based on ID
+// GetNote gets a particular note based on the ID and either returns
+// the JSON of the row or an error.
 func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
@@ -52,13 +59,19 @@ func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 			log.Fatalln(err)
 		}
 		// GetNote returns a singular models.Note
-		note = notesRepo.GetNote(db, note, id)
+		note, err = notesRepo.GetNote(db, note, id)
+		if err != nil {
+			// No note returned
+			h.JSONError(w, http.StatusNotFound, "Note not found")
+			return
+		}
 
-		json.NewEncoder(w).Encode(note)
+		h.JSONResponse(w, http.StatusOK, note)
 	}
 }
 
-// AddNote adds a new note
+// AddNote adds a new note and either returns the JSON last insert
+// ID or an error.
 func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
@@ -68,14 +81,20 @@ func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 
 		noteRepo := notesrepository.NotesRepository{}
 		// Pass note to AddNote to insert to DB
-		noteID := noteRepo.AddNote(db, note)
+		noteID, err := noteRepo.AddNote(db, note)
+		// No rows affected
+		if err != nil {
+			h.JSONError(w, http.StatusBadRequest, "Insert unsuccessful")
+			return
+		}
 
 		// Respond with last inserted note ID
-		json.NewEncoder(w).Encode(noteID)
+		h.JSONResponse(w, http.StatusOK, noteID)
 	}
 }
 
-// UpdateNote updates an existing note
+// UpdateNote updates a note and either returns the JSON of the
+// affected row or an error.
 func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
@@ -84,14 +103,21 @@ func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 		json.NewDecoder(r.Body).Decode(&note)
 
 		noteRepo := notesrepository.NotesRepository{}
-		rowsAffected := noteRepo.UpdateNote(db, note)
+
+		rowsAffected, err := noteRepo.UpdateNote(db, note)
+		// No rows were affected
+		if err != nil {
+			h.JSONError(w, http.StatusBadRequest, "Update unsuccessful")
+			return
+		}
 
 		// Respond with number of rows affected
-		json.NewEncoder(w).Encode(rowsAffected)
+		h.JSONResponse(w, http.StatusOK, rowsAffected)
 	}
 }
 
-// DeleteNote deletes an existing note
+// DeleteNote deletes a note and either returns the JSON of the
+// affected row or an error.
 func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params := mux.Vars(r)
@@ -103,9 +129,13 @@ func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 		}
 
 		noteRepo := notesrepository.NotesRepository{}
-		rowsAffected := noteRepo.DeleteNote(db, id)
+		rowsAffected, err := noteRepo.DeleteNote(db, id)
+		if err != nil {
+			h.JSONError(w, http.StatusBadRequest, "Delete unsuccessful")
+			return
+		}
 
 		// Respond with number of rows affected
-		json.NewEncoder(w).Encode(rowsAffected)
+		h.JSONResponse(w, http.StatusOK, rowsAffected)
 	}
 }
