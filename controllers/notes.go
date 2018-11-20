@@ -25,7 +25,7 @@ type Controller struct{}
 func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 	// Return handlerfunc
 	return func(w http.ResponseWriter, r *http.Request) {
-		// note and slice of notes will need to be passed to the repo
+		//note and slice of notes will need to be passed to the repo
 		var note models.Note
 		notes = []models.Note{}
 		// Create repo
@@ -35,10 +35,11 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 		notes, err := notesRepo.GetNotes(db, note, notes)
 		if err != nil {
 			// No notes returned
-			h.JSONError(w, http.StatusNotFound, "Empty set")
+			h.JSONErrResponse(w, http.StatusNotFound, "empty collection")
 			return
 		}
 
+		// Respond with status OK and collection of notes as payload
 		h.JSONResponse(w, http.StatusOK, notes)
 	}
 }
@@ -62,7 +63,7 @@ func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 		note, err = notesRepo.GetNote(db, note, id)
 		if err != nil {
 			// No note returned
-			h.JSONError(w, http.StatusNotFound, "Note not found")
+			h.JSONErrResponse(w, http.StatusNotFound, "resource not found")
 			return
 		}
 
@@ -81,20 +82,20 @@ func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 
 		noteRepo := notesrepository.NotesRepository{}
 		// Pass note to AddNote to insert to DB
-		noteID, err := noteRepo.AddNote(db, note)
+		lastInsertID, err := noteRepo.AddNote(db, note)
 		// No rows affected
 		if err != nil {
-			h.JSONError(w, http.StatusBadRequest, "Insert unsuccessful")
+			h.JSONErrResponse(w, http.StatusBadRequest, "add unsuccessful")
 			return
 		}
 
 		// Respond with last inserted note ID
-		h.JSONResponse(w, http.StatusOK, noteID)
+		h.JSONResponse(w, http.StatusCreated, lastInsertID)
 	}
 }
 
-// UpdateNote updates a note and either returns the JSON of the
-// affected row or an error.
+// UpdateNote updates an existing note OR creates a new note if the
+// resource doesn't exist.
 func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var note models.Note
@@ -104,14 +105,25 @@ func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 
 		noteRepo := notesrepository.NotesRepository{}
 
+		// Attempts to update note
 		rowsAffected, err := noteRepo.UpdateNote(db, note)
-		// No rows were affected
+		// Affected rows is zero, no notes were updated,
+		// create resource instead
 		if err != nil {
-			h.JSONError(w, http.StatusBadRequest, "Update unsuccessful")
+			lastInsertID, err := noteRepo.AddNote(db, note)
+			if err != nil {
+				// Insert failed, respond with error
+				h.JSONErrResponse(w, http.StatusBadRequest, "add unsuccessful")
+				return
+			}
+			// Update failed but insert is successful. Respond with
+			// status code created and last insert ID.
+			h.JSONResponse(w, http.StatusCreated, lastInsertID)
 			return
 		}
 
-		// Respond with number of rows affected
+		// Updating existing note successful, respond with number
+		// of rows affected.
 		h.JSONResponse(w, http.StatusOK, rowsAffected)
 	}
 }
@@ -131,11 +143,11 @@ func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 		noteRepo := notesrepository.NotesRepository{}
 		rowsAffected, err := noteRepo.DeleteNote(db, id)
 		if err != nil {
-			h.JSONError(w, http.StatusBadRequest, "Delete unsuccessful")
+			h.JSONErrResponse(w, http.StatusBadRequest, "delete unsuccessful")
 			return
 		}
 
-		// Respond with number of rows affected
-		h.JSONResponse(w, http.StatusOK, rowsAffected)
+		// Respond with status code no content
+		h.JSONResponse(w, http.StatusNoContent, rowsAffected)
 	}
 }
