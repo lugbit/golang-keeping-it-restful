@@ -62,7 +62,7 @@ Returns JSON data of every note.
 * **Error Response:**
 
   * **Code:** 404 Not Found <br/>
-    **Content:** `{"message":"Empty set"}`
+    **Content:** `{"message:":"empty collection"}`
  
  ### Get note
 
@@ -103,7 +103,7 @@ Returns JSON data of a particular note.
 * **Error Response:**
 
   * **Code:** 404 Not Found <br/>
-    **Content:** `{"message":"Note not found"}`
+    **Content:** `{"message:":"resource not found"}`
 
 ### Add note
 
@@ -141,9 +141,9 @@ Adds a new note.
 * **Error Response:**
 
   * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message":"Insert unsuccessful"}`
+    **Content:** `{"message":"add unsuccessful"}`
 
-### Update note
+### Update note (Adds note if note doesn't exist)
 
 Updates an existing note.
 
@@ -182,7 +182,7 @@ Updates an existing note.
 * **Error Response:**
 
   * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message":"Update unsuccessful"}`
+    **Content:** `{"message":"add unsuccessful"}`
     
 ### Delete note
 
@@ -206,15 +206,11 @@ Deletes an existing note.
 
 * **Success Response:**
 
-  * **Code:** 200 OK <br/>
-    **Content:**
-    ```
-    1
-    ```
+  * **Code:** 204 No Content<br/>
  
 * **Error Response:**
 
   * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message":"Delete unsuccessful"}`
+    **Content:** `{"message:":"delete unsuccessful"}`
 
 
