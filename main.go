@@ -8,6 +8,7 @@ import (
 
 	"./controllers"
 	"./drivers"
+	mw "./middlewares"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	gotenv "github.com/subosito/gotenv"
@@ -33,11 +34,12 @@ func main() {
 	r := mux.NewRouter()
 
 	// Routes
-	r.HandleFunc("/notes", controller.GetNotes(db)).Methods("GET")
+	r.Handle("/notes", mw.VerifyToken(controller.GetNotes(db))).Methods("GET")
 	r.HandleFunc("/notes/{id}", controller.GetNote(db)).Methods("GET")
 	r.HandleFunc("/notes", controller.AddNote(db)).Methods("POST")
 	r.HandleFunc("/notes", controller.UpdateNote(db)).Methods("PUT")
 	r.HandleFunc("/notes/{id}", controller.DeleteNote(db)).Methods("DELETE")
+	r.Handle("/users/login", controller.LoginUser(db)).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(os.Getenv("SERVER_PORT"), r))
 }
