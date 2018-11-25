@@ -9,9 +9,15 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-// VerifyToken is a middleware that checks request headers for a valid JWT token.
-func VerifyToken(h http.Handler) http.Handler {
+// Middleware is a struct used to initialize and call middleware functions
+type Middleware struct{}
+
+// Authorized is a middleware that checks request headers for a valid JWT token
+func (m Middleware) Authorized(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Retrieve secret environment variable
+		hmacSecret := []byte(os.Getenv("JWT_SECRET"))
+
 		// Check request header for a Token
 		// Check if the length of the Authorization value is greater than 0
 		if len(r.Header.Get("Authorization")) > 0 {
@@ -28,7 +34,7 @@ func VerifyToken(h http.Handler) http.Handler {
 					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 				}
 				// Return the secret and nil error
-				return []byte(os.Getenv("JWT_SECRET")), nil
+				return hmacSecret, nil
 			})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
