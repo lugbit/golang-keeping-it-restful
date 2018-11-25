@@ -9,6 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// UsersRepository a struct for intitializing and calling users repository functions.
 type UsersRepository struct{}
 
 // UserEmail queries the database for a user based on the argument email.
