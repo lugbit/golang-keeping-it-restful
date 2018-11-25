@@ -10,4 +10,5 @@ type Note struct {
 	Note      string `json:"note"`
 	Colour    string `json:"colour"`
 	Archived  bool   `json:"archived"`
+	UserID    int    `json:"userID,omitempty"`
 }
