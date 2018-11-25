@@ -12,17 +12,19 @@ import (
 // NotesRepository struct for initialization
 type NotesRepository struct{}
 
-// GetNotes queries the database for all notes and returns a slice of notes and an error.
-func (n NotesRepository) GetNotes(db *sql.DB, note models.Note, notes []models.Note) ([]models.Note, error) {
+// GetNotes queries the database for all notes belonging to a user and returns a slice of notes and an error.
+func (n NotesRepository) GetNotes(db *sql.DB, note models.Note, notes []models.Note, userID int) ([]models.Note, error) {
 	sqlStmt := `SELECT
 					fldID,
 					fldCreatedAt,
-    				fldUpdatedAt, 
-    				fldTitle,
-    				fldNote, 
-    				fldColour, 
-    				fldArchived
-				FROM tblNotes;`
+					fldUpdatedAt, 
+					fldTitle,
+					fldNote, 
+					fldColour, 
+					fldArchived,
+					fldFKUserID
+				FROM tblNotes
+				WHERE fldFKUserID = ?;`
 
 	// Prepare statment
 	stmt, err := db.Prepare(sqlStmt)
@@ -32,7 +34,7 @@ func (n NotesRepository) GetNotes(db *sql.DB, note models.Note, notes []models.N
 	defer stmt.Close()
 
 	// rows will hold all found rows
-	rows, err := stmt.Query()
+	rows, err := stmt.Query(userID)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -45,7 +47,7 @@ func (n NotesRepository) GetNotes(db *sql.DB, note models.Note, notes []models.N
 		// Increment row
 		rowCount++
 		// Scan each row to note struct
-		err := rows.Scan(&note.ID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Note, &note.Colour, &note.Archived)
+		err := rows.Scan(&note.ID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Note, &note.Colour, &note.Archived, &note.UserID)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -70,8 +72,8 @@ func (n NotesRepository) GetNotes(db *sql.DB, note models.Note, notes []models.N
 	return notes, nil
 }
 
-// GetNote queries the database for a particular note and returns a note and an error.
-func (n NotesRepository) GetNote(db *sql.DB, note models.Note, id int) (models.Note, error) {
+// GetNote queries the database for a particular note belonging to a user and returns a note and an error.
+func (n NotesRepository) GetNote(db *sql.DB, note models.Note, noteID, userID int) (models.Note, error) {
 	sqlStmt := `SELECT
 					fldID,
 					fldCreatedAt,
@@ -79,9 +81,11 @@ func (n NotesRepository) GetNote(db *sql.DB, note models.Note, id int) (models.N
     				fldTitle,
     				fldNote, 
     				fldColour, 
-    				fldArchived
+					fldArchived,
+					fldFKUserID
 				FROM tblNotes
-				WHERE fldID = ?;`
+				WHERE fldID = ?
+				AND fldFKUserID =?`
 
 	// Prepare statment
 	stmt, err := db.Prepare(sqlStmt)
@@ -91,7 +95,7 @@ func (n NotesRepository) GetNote(db *sql.DB, note models.Note, id int) (models.N
 	defer stmt.Close()
 
 	// Return row and scan columns to passed note
-	err = stmt.QueryRow(id).Scan(&note.ID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Note, &note.Colour, &note.Archived)
+	err = stmt.QueryRow(noteID, userID).Scan(&note.ID, &note.CreatedAt, &note.UpdatedAt, &note.Title, &note.Note, &note.Colour, &note.Archived, &note.UserID)
 	if err != nil {
 		// No row found
 		if err == sql.ErrNoRows {
@@ -107,10 +111,10 @@ func (n NotesRepository) GetNote(db *sql.DB, note models.Note, id int) (models.N
 
 // AddNote inserts a new note in the database and returns the last insert ID
 // and an error.
-func (n NotesRepository) AddNote(db *sql.DB, note models.Note) (int, error) {
-	sqlStmt := `INSERT INTO tblNotes(fldTitle, fldNote) 
+func (n NotesRepository) AddNote(db *sql.DB, note models.Note, userID int) (int, error) {
+	sqlStmt := `INSERT INTO tblNotes(fldTitle, fldNote, fldFKUserID) 
 				VALUES 
-					(?, ?)`
+					(?, ?, ?)`
 
 	// Prepare statment
 	stmt, err := db.Prepare(sqlStmt)
@@ -120,7 +124,7 @@ func (n NotesRepository) AddNote(db *sql.DB, note models.Note) (int, error) {
 	defer stmt.Close()
 
 	// Exec does not return any rows
-	res, err := stmt.Exec(note.Title, note.Note)
+	res, err := stmt.Exec(note.Title, note.Note, userID)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -147,10 +151,11 @@ func (n NotesRepository) AddNote(db *sql.DB, note models.Note) (int, error) {
 
 // UpdateNote updates an existing note in the database and returns the number of
 // rows affected and an error.
-func (n NotesRepository) UpdateNote(db *sql.DB, note models.Note) (int, error) {
+func (n NotesRepository) UpdateNote(db *sql.DB, note models.Note, userID int) (int, error) {
 	sqlStmt := `UPDATE tblNotes
 					SET fldTitle = ?, fldNote = ?, fldColour = ?, fldArchived = ?
-				WHERE fldID = ?;`
+				WHERE fldID = ?
+				AND fldFKUserID = ?`
 
 	// Prepare statment
 	stmt, err := db.Prepare(sqlStmt)
@@ -160,7 +165,7 @@ func (n NotesRepository) UpdateNote(db *sql.DB, note models.Note) (int, error) {
 	defer stmt.Close()
 
 	// Exec does not return any rows
-	res, err := stmt.Exec(note.Title, note.Note, note.Colour, note.Archived, note.ID)
+	res, err := stmt.Exec(note.Title, note.Note, note.Colour, note.Archived, note.ID, userID)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -181,9 +186,10 @@ func (n NotesRepository) UpdateNote(db *sql.DB, note models.Note) (int, error) {
 
 // DeleteNote deletes an existing note in the database and returns the number of
 // rows affected and an error.
-func (n NotesRepository) DeleteNote(db *sql.DB, id int) (int, error) {
+func (n NotesRepository) DeleteNote(db *sql.DB, noteID, userID int) (int, error) {
 	sqlStmt := `DELETE FROM tblNotes
-				WHERE fldID = ?`
+				WHERE fldID = ?
+				AND fldFKUserID = ?;`
 
 	// Prepare statment
 	stmt, err := db.Prepare(sqlStmt)
@@ -193,7 +199,7 @@ func (n NotesRepository) DeleteNote(db *sql.DB, id int) (int, error) {
 	defer stmt.Close()
 
 	// Exec does not return any rows
-	res, err := stmt.Exec(id)
+	res, err := stmt.Exec(noteID, userID)
 	if err != nil {
 		log.Fatalln(err)
 	}
