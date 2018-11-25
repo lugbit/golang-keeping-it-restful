@@ -11,3 +11,7 @@ CALL getAllNotes();
 
 CALL getAllUserNotes();
 
+INSERT INTO tblNotes(fldTitle, fldNote, fldFKUserID) 
+				VALUES 
+					("muy", "first", 1)
+
