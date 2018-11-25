@@ -6,14 +6,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 
 	h "../helpers"
 	"../models"
 	"../repo/notesrepository"
-	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
 
@@ -30,7 +27,7 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Extract claims from JWT
-		mapClaims, _ := extractClaims(r)
+		mapClaims, _ := h.ExtractClaims(r)
 		// Extract the user ID from the JWT payload
 		//
 		// The value of mapClaims["id"] is type interface so we need
@@ -61,7 +58,7 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
-		mapClaims, _ := extractClaims(r)
+		mapClaims, _ := h.ExtractClaims(r)
 		userID := int(mapClaims["id"].(float64))
 
 		var note models.Note
@@ -92,7 +89,7 @@ func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
-		mapClaims, _ := extractClaims(r)
+		mapClaims, _ := h.ExtractClaims(r)
 		userID := int(mapClaims["id"].(float64))
 
 		var note models.Note
@@ -119,7 +116,7 @@ func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
-		mapClaims, _ := extractClaims(r)
+		mapClaims, _ := h.ExtractClaims(r)
 		userID := int(mapClaims["id"].(float64))
 
 		var note models.Note
@@ -157,7 +154,7 @@ func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
-		mapClaims, _ := extractClaims(r)
+		mapClaims, _ := h.ExtractClaims(r)
 		userID := int(mapClaims["id"].(float64))
 
 		params := mux.Vars(r)
@@ -178,30 +175,4 @@ func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 		// Respond with status code no content
 		h.JSONResponse(w, http.StatusNoContent, rowsAffected)
 	}
-}
-
-func extractClaims(r *http.Request) (jwt.MapClaims, bool) {
-	// Retrieve secret environment variable
-	hmacSecret := []byte(os.Getenv("JWT_SECRET"))
-
-	// Split JWT from the request authorization header
-	authSlice := strings.Split(r.Header.Get("Authorization"), " ")
-	// JWT will be at index 1 after the "Bearer"
-	jwtToken := authSlice[1]
-
-	token, err := jwt.Parse(jwtToken, func(jwtToken *jwt.Token) (interface{}, error) {
-		// check token signing method etc
-		return hmacSecret, nil
-	})
-
-	if err != nil {
-		return nil, false
-	}
-	// Check if token is valid
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		return claims, true
-	}
-
-	// Invalid JWT
-	return nil, false
 }
