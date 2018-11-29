@@ -11,6 +11,7 @@ import (
 	h "../helpers"
 	"../models"
 	"../repo/notesrepository"
+	validate "../validators"
 	"github.com/gorilla/mux"
 )
 
@@ -34,7 +35,7 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 		// to do type assertion to float64 and then convert it to int.
 		userID := int(mapClaims["id"].(float64))
 
-		//note and slice of notes will need to be passed to the repo
+		// note and slice of notes will need to be passed to the repo
 		var note models.Note
 		notes = []models.Note{}
 		// Create repo
@@ -44,7 +45,9 @@ func (c Controller) GetNotes(db *sql.DB) http.HandlerFunc {
 		notes, err := notesRepo.GetNotes(db, note, notes, userID)
 		if err != nil {
 			// No notes returned
-			h.JSONErrResponse(w, http.StatusNotFound, "empty collection")
+			// New Error
+			errObj := models.NewError(models.AppCodeNoteColEmpty, "No notes found", "Ensure you have at least one note", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
 			return
 		}
 
@@ -76,7 +79,8 @@ func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 		note, err = notesRepo.GetNote(db, note, noteID, userID)
 		if err != nil {
 			// No note returned
-			h.JSONErrResponse(w, http.StatusNotFound, "resource not found")
+			errObj := models.NewError(models.AppCodeNoteNotFound, "Note doesn't exist", "There is no note belonging to you with that ID", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
 			return
 		}
 
@@ -84,8 +88,8 @@ func (c Controller) GetNote(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// AddNote adds a new note and either returns the JSON last insert
-// ID or an error.
+// AddNote adds a new note and then immediately calls GetNote to return
+// the note to the client.
 func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
@@ -97,22 +101,45 @@ func (c Controller) AddNote(db *sql.DB) http.HandlerFunc {
 		// Decode JSON body from request and store in note
 		json.NewDecoder(r.Body).Decode(&note)
 
+		// Validate fields
+		noteValidator := validate.Note{
+			Title: note.Title,
+			Note:  note.Note,
+		}
+		// Call the Validate method on the login validator
+		// which returns a slice of ErrorObjects
+		noteErrors := noteValidator.ValidateAddNote()
+		// Check for errors
+		if len(noteErrors) > 0 {
+			// Respond with errors JSON
+			h.JSONErrResponse(w, http.StatusBadRequest, noteErrors)
+			return
+		}
+
 		noteRepo := notesrepository.NotesRepository{}
 		// Pass note to AddNote to insert to DB
 		lastInsertID, err := noteRepo.AddNote(db, note, userID)
 		// No rows affected
 		if err != nil {
-			h.JSONErrResponse(w, http.StatusBadRequest, "add unsuccessful")
+			// Add unsuccessful
+			errObj := models.NewError(models.AppCodeAddFailed, "Unable to add note", "Internal server error", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusInternalServerError, []models.ErrorObject{errObj})
+			return
+		}
+		// Get inserted note to return to client
+		note, err = noteRepo.GetNote(db, note, lastInsertID, userID)
+		if err != nil {
+			errObj := models.NewError(models.AppCodeNoteNotFound, "Note doesn't exist", "There is no note belonging to you with that ID", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
 			return
 		}
 
-		// Respond with last inserted note ID
-		h.JSONResponse(w, http.StatusCreated, lastInsertID)
+		// Respond with last inserted note
+		h.JSONResponse(w, http.StatusCreated, note)
 	}
 }
 
-// UpdateNote updates a user's existing note OR creates a new note if the
-// note does not exist.
+// UpdateNote updates a user's existing note and responds with the updated note.
 func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the user ID from the JWT.
@@ -124,28 +151,38 @@ func (c Controller) UpdateNote(db *sql.DB) http.HandlerFunc {
 		// Decode JSON body from request and store in note
 		json.NewDecoder(r.Body).Decode(&note)
 
-		noteRepo := notesrepository.NotesRepository{}
-
-		// Attempts to update note
-		rowsAffected, err := noteRepo.UpdateNote(db, note, userID)
-		// Affected rows is zero, no notes were updated,
-		// create resource instead
-		if err != nil {
-			lastInsertID, err := noteRepo.AddNote(db, note, userID)
-			if err != nil {
-				// Insert failed, respond with error
-				h.JSONErrResponse(w, http.StatusBadRequest, "add unsuccessful")
-				return
-			}
-			// Update failed but insert is successful. Respond with
-			// status code created and last insert ID.
-			h.JSONResponse(w, http.StatusCreated, lastInsertID)
+		// Validate fields
+		noteValidator := validate.Note{
+			ID:    note.ID,
+			Title: note.Title,
+			Note:  note.Note,
+		}
+		noteErrors := noteValidator.ValidateUpdateNote()
+		if len(noteErrors) > 0 {
+			h.JSONErrResponse(w, http.StatusBadRequest, noteErrors)
 			return
 		}
 
-		// Updating existing note successful, respond with number
-		// of rows affected.
-		h.JSONResponse(w, http.StatusOK, rowsAffected)
+		noteRepo := notesrepository.NotesRepository{}
+
+		// Attempts to update note, throw the number of rows affected returned
+		_, err := noteRepo.UpdateNote(db, note, userID)
+		if err != nil {
+			// Update unsuccessful
+			errObj := models.NewError(models.AppCodeNoteNotFound, "Updating note failed", "Ensure the note ID you are updating exists.", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
+			return
+		}
+
+		// Updating note successful, return note.
+		noteUpdated, err := noteRepo.GetNote(db, note, note.ID, userID)
+		if err != nil {
+			errObj := models.NewError(models.AppCodeNoteNotFound, "Note doesn't exist", "There is no note belonging to you with that ID", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
+			return
+		}
+		// Respond with last updated note
+		h.JSONResponse(w, http.StatusCreated, noteUpdated)
 	}
 }
 
@@ -168,11 +205,12 @@ func (c Controller) DeleteNote(db *sql.DB) http.HandlerFunc {
 		noteRepo := notesrepository.NotesRepository{}
 		rowsAffected, err := noteRepo.DeleteNote(db, noteID, userID)
 		if err != nil {
-			h.JSONErrResponse(w, http.StatusBadRequest, "delete unsuccessful")
+			errObj := models.NewError(models.AppCodeNoteNotFound, "Deleting note failed", "Ensure the ID of the note you are trying to delete exists.", "https://api.lugbit.com/docs/errors")
+			h.JSONErrResponse(w, http.StatusNotFound, []models.ErrorObject{errObj})
 			return
 		}
 
-		// Respond with status code no content
+		// Respond with status no content (rows affected doesn't get shown)
 		h.JSONResponse(w, http.StatusNoContent, rowsAffected)
 	}
 }
