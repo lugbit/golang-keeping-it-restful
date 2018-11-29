@@ -13,6 +13,98 @@ A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)ful backe
 | DELETE               | /v1/notes/:id          | Yes         | Delete a user's existing note.                     |
 
 ----
+
+### Authenticate
+
+Authenticate a user.
+
+* **URL**
+
+  /v1/users/authenticate
+
+* **Method:**
+
+  `POST`
+  
+*  **URL Params**
+  
+   None
+
+* **Data Params**
+
+  ```
+  {
+    "email": "Username",
+    "password": "Password"
+  }
+  ```
+
+* **Success Response:**
+
+  * **Code:** 200 OK <br/>
+    **Content:**
+    ```
+    {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZmlyc3ROYW1lI..."
+    }
+    ```
+ 
+* **Error Responses:**
+
+  * **Invalid username/password**
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 3403,
+            "text": "Incorrect username or password",
+            "hint": "Verify that the email address and password are correct",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
+    
+  * **Empty username or password field** 
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 3400,
+            "text": "Email cannot be empty",
+            "hint": "Email is a required field",
+            "info": "https://api.lugbit.com/docs/errors"
+        },
+        {
+            "code": 3401,
+            "text": "Password cannot be empty",
+            "hint": "Password is a required field",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
+    
+  * **Invalid email** 
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 3499,
+            "text": "Email is invalid",
+            "hint": "Ensure the email is formatted in example@email.com",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
+    
 ### Get notes
 
 Returns JSON data of every note.
