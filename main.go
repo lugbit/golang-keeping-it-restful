@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,19 +9,20 @@ import (
 	"./controllers"
 	"./drivers"
 	"./middlewares"
+	"./routes"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	gotenv "github.com/subosito/gotenv"
 )
 
-// Gobal DB handler variable
+// Gobal DB handler
 var db *sql.DB
 
 func init() {
 	// Load environment variables on startup
 	err := gotenv.Load()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatalln(err.Error())
 	}
 }
 
@@ -31,25 +31,17 @@ func main() {
 	db = drivers.ConnectDB()
 	defer db.Close()
 
-	// Initialize controllers
+	// Initialize controller, middleware and routes
 	controller := controllers.Controller{}
-	// Initialize middlewares
 	middleware := middlewares.Middleware{}
+	routes := routes.Routes{}
 
-	// Gorilla mux
+	// Gorilla mux router
 	r := mux.NewRouter()
 
-	// Routes
+	// Get routes and pass the router, controller, middleware and db
+	routes.Get(r, controller, middleware, db)
 
-	// Open routes
-	r.Handle("/users/login", controller.LoginUser(db)).Methods("POST")
-
-	// Protected routes
-	r.Handle("/notes", middleware.Authorized(controller.GetNotes(db))).Methods("GET")
-	r.Handle("/notes/{id}", middleware.Authorized(controller.GetNote(db))).Methods("GET")
-	r.Handle("/notes", middleware.Authorized(controller.AddNote(db))).Methods("POST")
-	r.Handle("/notes", middleware.Authorized(controller.UpdateNote(db))).Methods("PUT")
-	r.Handle("/notes/{id}", middleware.Authorized(controller.DeleteNote(db))).Methods("DELETE")
-
+	// Start server on port specified in the SERVER_PORT environment variable
 	log.Fatal(http.ListenAndServe(os.Getenv("SERVER_PORT"), r))
 }
