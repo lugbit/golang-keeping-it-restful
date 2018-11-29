@@ -4,6 +4,8 @@ package helpers
 import (
 	"encoding/json"
 	"net/http"
+
+	"../models"
 )
 
 // JSONResponse sets up response http headers and responds with JSON.
@@ -16,8 +18,7 @@ func JSONResponse(w http.ResponseWriter, resCode int, data interface{}) {
 	json.NewEncoder(w).Encode(data)
 }
 
-// JSONErrResponse piggy backs off JSONResponse and instead accepts
-// only a message string.
-func JSONErrResponse(w http.ResponseWriter, resCode int, msg string) {
-	JSONResponse(w, resCode, map[string]string{"message:": msg})
+// JSONErrResponse
+func JSONErrResponse(w http.ResponseWriter, resCode int, errorObjects []models.ErrorObject) {
+	JSONResponse(w, resCode, models.ErrorsPayload{Errors: errorObjects})
 }
