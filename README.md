@@ -51,7 +51,7 @@ Authenticate a user.
  
 * **Error Responses:**
 
-  * **Invalid username/password**
+  * **Invalid username/password** <br/>
     **Code:** 400 Bad Request <br/>
     **Content:**
     ```
@@ -67,7 +67,7 @@ Authenticate a user.
     }
     ```
     
-  * **Empty username or password field** 
+  * **Empty username and or password** <br/> 
     **Code:** 400 Bad Request <br/>
     **Content:**
     ```
@@ -89,7 +89,7 @@ Authenticate a user.
     }
     ```
     
-  * **Invalid email** 
+  * **Invalid email** <br/> 
     **Code:** 400 Bad Request <br/>
     **Content:**
     ```
@@ -111,7 +111,7 @@ Returns JSON data of every note.
 
 * **URL**
 
-  /notes
+  /v1/notes
 
 * **Method:**
 
@@ -132,30 +132,45 @@ Returns JSON data of every note.
     ```
     [
       {
-          "id": 1,
-          "created": "2018-11-18 17:55:01",
-          "updated": "2018-11-18 17:55:01",
-          "title": "First Note",
-          "note": "My first note.",
-          "colour": "#ffffff",
-          "archived": false
+        "id": 2,
+        "created": "2018-11-29 20:10:29",
+        "updated": "2018-11-29 20:10:29",
+        "title": "Groceries",
+        "note": "Milk, bread and ice-cream",
+        "colour": "#ffffff",
+        "archived": false,
+        "userID": 1
       },
       {
-          "id": 2,
-          "created": "2018-11-18 17:55:13",
-          "updated": "2018-11-18 17:55:13",
-          "title": "Second Note",
-          "note": "My second note.",
-          "colour": "#ffffff",
-          "archived": false
+        "id": 4,
+        "created": "2018-11-29 20:11:01",
+        "updated": "2018-11-29 20:11:01",
+        "title": "New Note",
+        "note": "This note is brought to you by Postman",
+        "colour": "#ffffff",
+        "archived": false,
+        "userID": 1
       }
     ]
     ```
  
 * **Error Response:**
 
-  * **Code:** 404 Not Found <br/>
-    **Content:** `{"message:":"empty collection"}`
+  * **Empty notes collection** <br/> 
+    **Code:** 404 Not Found <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6900,
+            "text": "No notes found",
+            "hint": "Ensure you have at least one note",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
  
  ### Get note
 
@@ -163,7 +178,7 @@ Returns JSON data of a particular note.
 
 * **URL**
 
-  /notes/:id
+  /v1/notes/:id  
 
 * **Method:**
 
@@ -184,19 +199,33 @@ Returns JSON data of a particular note.
     ```
     {
       "id": 1,
-      "created": "2018-11-18 17:55:01",
-      "updated": "2018-11-18 17:55:01",
+      "created": "2018-11-29 20:52:14",
+      "updated": "2018-11-29 20:52:14",
       "title": "First Note",
-      "note": "My first note.",
+      "note": "This is my first note",
       "colour": "#ffffff",
-      "archived": false
-      }
+      "archived": false,
+      "userID": 1
+    }
     ```
  
 * **Error Response:**
 
-  * **Code:** 404 Not Found <br/>
-    **Content:** `{"message:":"resource not found"}`
+  * **Note not found** <br/> 
+    **Code:** 404 Not Found <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6901,
+            "text": "Note doesn't exist",
+            "hint": "There is no note belonging to you with that ID",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
 
 ### Add note
 
@@ -204,7 +233,7 @@ Adds a new note.
 
 * **URL**
 
-  /notes
+  /v1/notes 
 
 * **Method:**
 
@@ -218,23 +247,66 @@ Adds a new note.
 
   ```
   {
-    "title":"Third Note",
-    "note":"My third note."
+    "title":"New Note",
+    "note":"This note is brought to you by Postman"
   }
   ```
 
 * **Success Response:**
 
-  * **Code:** 200 OK <br/>
+  * **Code:** 201 Created <br/>
     **Content:**
     ```
-    3
+    {
+      "id": 4,
+      "created": "2018-11-29 20:53:36",
+      "updated": "2018-11-29 20:53:36",
+      "title": "New Note",
+      "note": "This note is brought to you by Postman",
+      "colour": "#ffffff",
+      "archived": false,
+      "userID": 1
+    }
     ```
  
 * **Error Response:**
 
-  * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message":"add unsuccessful"}`
+  * **Internal server error** <br/>
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6906,
+            "text": "Unable to add note",
+            "hint": "Internal server error",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
+  * **Empty title and or body** <br/>
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+      ```
+      {
+        "errors": [
+          {
+            "code": 6800,
+            "text": "Title cannot be empty",
+            "hint": "Note title is required",
+            "info": "https://api.lugbit.com/docs/errors"
+          },
+          {
+            "code": 6850,
+            "text": "Note text cannot be empty",
+            "hint": "Note body is required",
+            "info": "https://api.lugbit.com/docs/errors"
+          }
+      ]
+      }
+      ```
 
 ### Update note (Adds note if note doesn't exist)
 
@@ -242,7 +314,7 @@ Updates an existing note.
 
 * **URL**
 
-  /notes
+  /v1/notes   
 
 * **Method:**
 
@@ -256,26 +328,76 @@ Updates an existing note.
 
   ```
   {
-    "id": 3,
-    "title":"Third note edit",
-    "note":"My third note edited.",
-    "colour":"#0000ff",
-    "archived": false
+	  "id": 1,
+	  "title":"Note updated",
+	  "note":"This note was updated successfully.",
+	  "colour":"#0000ff",
+	  "archived": false
   }
   ```
 
 * **Success Response:**
 
-  * **Code:** 200 OK <br/>
+  * **Code:** 201 Created <br/>
     **Content:**
     ```
-    1
+    {
+      "id": 1,
+      "created": "2018-11-29 20:52:14",
+      "updated": "2018-11-29 21:00:57",
+      "title": "Note updated",
+      "note": "This note was updated successfully.",
+      "colour": "#0000ff",
+      "archived": false,
+      "userID": 1
+    }
     ```
  
 * **Error Response:**
 
-  * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message":"add unsuccessful"}`
+  * ** Update failed** <br/>
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6901,
+            "text": "Updating note failed",
+            "hint": "Ensure the note ID you are updating exists.",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
+    
+   * ** Empty required fields** <br/>
+    **Code:** 400 Bad Request <br/>
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6888,
+            "text": "Note ID is required",
+            "hint": "A note ID is required when updating a note",
+            "info": "https://api.lugbit.com/docs/errors"
+        },
+        {
+            "code": 6800,
+            "text": "Title cannot be empty",
+            "hint": "Note title is required",
+            "info": "https://api.lugbit.com/docs/errors"
+        },
+        {
+            "code": 6850,
+            "text": "Note text cannot be empty",
+            "hint": "Note body is required",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
     
 ### Delete note
 
@@ -283,11 +405,11 @@ Deletes an existing note.
 
 * **URL**
 
-  /notes/:id
+  /v1/notes/:id 
 
 * **Method:**
 
-  `PUT`
+  `DELETE`
   
 *  **URL Params**
   
@@ -304,6 +426,18 @@ Deletes an existing note.
 * **Error Response:**
 
   * **Code:** 400 Bad Request <br/>
-    **Content:** `{"message:":"delete unsuccessful"}`
+    **Content:**
+    ```
+    {
+    "errors": [
+        {
+            "code": 6901,
+            "text": "Deleting note failed",
+            "hint": "Ensure the ID of the note you are trying to delete exists.",
+            "info": "https://api.lugbit.com/docs/errors"
+        }
+    ]
+    }
+    ```
 
 
